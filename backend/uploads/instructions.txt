@@ -1,0 +1,43 @@
+INSTRUCTIONS FOR UPLOADING QUESTIONS VIA EXCEL
+
+1. COMPANY:
+   - The company that asked the question (e.g., TechCorp, SoftWorks, etc.).
+
+2. COURSE:
+   - The subject or course name (e.g., DATA STRUCTURES, OPERATING SYSTEMS).
+
+3. PYQ:
+   - The actual question text (e.g., "What is the time complexity of binary search?").
+
+4. CONCEPT:
+   - The concept or topic the question belongs to (optional).
+
+5. COURSE_CODE:
+   - The course code corresponding to the course (e.g., CSEN2001).
+
+6. OptionA, OptionB, OptionC, OptionD:
+   - The options for the question. Use "Placeholder" for coding questions.
+
+7. Answer:
+   - The correct answer (e.g., OptionA, OptionB, OptionC, OptionD, AllValid, or Placeholder).
+
+ADDITIONAL NOTES:
+- "AllValid" means all options are correct.
+- "Placeholder" indicates that the question is a coding question.
+- The "CONCEPT" field is optional and can be left blank.
+
+COURSE CODE REFERENCE:
+CSEN1021	PROGRAMMING WITH PYTHON
+CSEN1111	OOPS WITH JAVA
+CSEN2061	DBMS
+CSEN1101	OS
+CSEN2021	CN
+CSEN2071	CNS
+CSEN2121	CLOUD COMPUTING
+CSEN2141	DATA ANALYTICS
+CSEN3071	WEB APPLICATION DEVELOPMENT
+CSEN1011	PROGRAMMING WITH C
+CSEN3311	SOFTWARE TESTING METHODOLOGIES
+CSEN2001	DATA STRUCTURES
+CSEN1131	SOFTWARE ENGINEERING
+CSEN3001	DESIGN AND ANALYSIS OF ALGORITHMS
