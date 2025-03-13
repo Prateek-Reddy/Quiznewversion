@@ -120,13 +120,13 @@ const QuestionsPage = () => {
                 <td className="p-3 flex gap-2">
                   <button
                     onClick={() => navigate(`/admin/questions/${question.question_id}/edit`)}
-                    className="bg-[#007367] text-white px-3 py-1 rounded-md hover:bg-[#005f56]"
+                    className="w-20 bg-[#007367] text-white px-3 py-1 rounded-md hover:bg-[#005f56]"
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => handleDelete(question.question_id)}
-                    className="bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600"
+                    className="w-20 bg-red-500 text-white px-3 py-1 rounded-md hover:bg-red-600"
                   >
                     Delete
                   </button>

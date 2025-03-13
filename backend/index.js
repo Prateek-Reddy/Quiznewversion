@@ -5,6 +5,7 @@ const authRoutes = require('./routes/authRoutes');
 const scoreRoutes = require('./routes/scoreRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const curriculumRoutes = require('./routes/curriculumRoutes');
+const datavizRoutes = require('./routes/datavizRoutes');
 require('dotenv').config();
 
 const app = express();
@@ -17,6 +18,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/scores', scoreRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/curriculum', curriculumRoutes);
+app.use('/api/dataviz', datavizRoutes);
+
 
 // Start server
 const PORT = process.env.PORT || 5000;

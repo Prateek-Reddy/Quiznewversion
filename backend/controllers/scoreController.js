@@ -1,5 +1,6 @@
 const Score = require('../models/Score');
 const AggregatedMetric = require('../models/AggregatedMetric');
+const pool = require('../config/db');
 
 // Save a new score
 exports.saveScore = async (req, res) => {
@@ -9,18 +10,32 @@ exports.saveScore = async (req, res) => {
   try {
     // Save the new score
     const newScore = await Score.create(userId, courseCode, company, score, totalQuestions);
+    console.log('New score saved:', newScore);
 
-    // Delete the oldest score if the user has more than 10 scores
-    const scores = await Score.getLast10(userId);
-    if (scores.length > 10) {
+    // Get the total number of attempts for the user
+    const totalAttemptsQuery = `
+      SELECT COUNT(*) FROM scores
+      WHERE user_id = $1;
+    `;
+    const totalAttemptsResult = await pool.query(totalAttemptsQuery, [userId]);
+    const totalAttempts = parseInt(totalAttemptsResult.rows[0].count, 10);
+    console.log('Total attempts:', totalAttempts);
+
+    // If there are more than 10 attempts, delete the oldest one
+    if (totalAttempts > 10) {
+      console.log('More than 10 attempts found. Deleting the oldest attempt...');
       await Score.deleteOldest(userId);
+    } else {
+      console.log('No need to delete. Total attempts:', totalAttempts);
     }
 
     // Update aggregated metrics
     await AggregatedMetric.update(userId, courseCode, company, score);
+    console.log('Aggregated metrics updated.');
 
     res.status(201).json(newScore);
   } catch (error) {
+    console.error('Error in saveScore:', error);
     res.status(500).json({ error: error.message });
   }
 };

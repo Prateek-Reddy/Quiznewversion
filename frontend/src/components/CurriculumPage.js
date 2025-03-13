@@ -122,19 +122,21 @@ const CurriculumAnalysesPage = () => {
                     <td className="p-3">{analysis.course_id}</td>
                     <td className="p-3">{analysis.subject_name}</td>
                     <td className="p-3">
-                      <button
-                        onClick={() => navigate(`/admin/curriculum-analyses/${analysis.cur_id}/edit`)}
-                        className="bg-[#007367] text-white py-1 px-2 rounded-md hover:bg-[#005f56] mr-2"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(analysis.cur_id)}
-                        className="bg-red-500 text-white py-1 px-2 rounded-md hover:bg-red-600"
-                      >
-                        Delete
-                      </button>
-                    </td>
+  <div className="flex gap-2">
+    <button
+      onClick={() => navigate(`/admin/curriculum-analyses/${analysis.cur_id}/edit`)}
+      className="w-20 bg-[#007367] text-white py-1 px-2 rounded-md hover:bg-[#005f56]"
+    >
+      Edit
+    </button>
+    <button
+      onClick={() => handleDelete(analysis.cur_id)}
+      className="w-20 bg-red-500 text-white py-1 px-2 rounded-md hover:bg-red-600"
+    >
+      Delete
+    </button>
+  </div>
+</td>
                   </tr>
                 ))}
               </tbody>

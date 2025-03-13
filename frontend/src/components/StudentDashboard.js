@@ -2,16 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { logout } from '../utils/auth';
 import logo from './logo.png';
-import { MdQuiz } from "react-icons/md";
+import { MdQuiz, MdHome, MdBarChart, MdPieChart } from "react-icons/md"; // Added MdBarChart and MdPieChart
 import { GrScorecard } from "react-icons/gr";
 import { FaQuestion } from "react-icons/fa";
 import { RiFileList3Fill } from "react-icons/ri";
 
 const StudentDashboard = () => {
-  const location = useLocation(); // Get the current route location
-  const [activeLink, setActiveLink] = useState(location.pathname); // Track the active link
+  const location = useLocation();
+  const [activeLink, setActiveLink] = useState(location.pathname);
 
-  // Update the active link whenever the location changes
   useEffect(() => {
     setActiveLink(location.pathname);
   }, [location.pathname]);
@@ -19,12 +18,12 @@ const StudentDashboard = () => {
   return (
     <div className="min-h-screen bg-[#f0e1cb] flex flex-col">
       {/* Top Bar */}
-      <div className="bg-[#007367] p-6"> {/* Increased padding for thicker top area */}
+      <div className="bg-[#007367] p-6">
         <div className="flex justify-between items-center">
           {/* Logo and Title */}
           <div className="flex items-center">
             <img
-              src={logo} // Replace with your logo path
+              src={logo}
               alt="College Logo"
               className="h-35 w-40 mr-10"
             />
@@ -43,6 +42,22 @@ const StudentDashboard = () => {
         {/* Navigation Links */}
         <nav className="mt-6">
           <ul className="flex justify-around">
+            <li>
+              <Link
+                to="/student/home"
+                className={`flex flex-col items-center p-4 rounded-md text-[#f0e1cb] hover:bg-[#f0e1cb] hover:text-[#007367] transition-colors ${
+                  activeLink === '/student/home' ? 'bg-[#f0e1cb] !text-[#007367]' : ''
+                }`}
+                onClick={() => setActiveLink('/student/home')}
+              >
+                <MdHome
+                  className={`text-3xl mb-2 ${
+                    activeLink === '/student/home' ? '!text-[#007367]' : ''
+                  }`}
+                />
+                <span className="text-lg">Home</span>
+              </Link>
+            </li>
             <li>
               <Link
                 to="/student/quiz"
@@ -107,13 +122,29 @@ const StudentDashboard = () => {
                 <span className="text-lg">View Curriculum</span>
               </Link>
             </li>
+            <li>
+              <Link
+                to="/student/data-viz"
+                className={`flex flex-col items-center p-4 rounded-md text-[#f0e1cb] hover:bg-[#f0e1cb] hover:text-[#007367] transition-colors ${
+                  activeLink === '/student/data-viz' ? 'bg-[#f0e1cb] !text-[#007367]' : ''
+                }`}
+                onClick={() => setActiveLink('/student/data-viz')}
+              >
+                <MdBarChart
+                  className={`text-3xl mb-2 ${
+                    activeLink === '/student/data-viz' ? '!text-[#007367]' : ''
+                  }`}
+                />
+                <span className="text-lg">Data Viz</span>
+              </Link>
+            </li>
           </ul>
         </nav>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 bg-cream p-6 rounded-t-lg shadow-lg">
-        <Outlet /> {/* This will render the nested routes (Quiz, Scores, ViewQuestions, or ViewCurriculum) */}
+        <Outlet />
       </div>
     </div>
   );

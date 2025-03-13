@@ -15,8 +15,7 @@ exports.getDistinct = async (req, res) => {
     const companiesResult = await pool.query(companiesQuery);
     const companies = companiesResult.rows.map(row => row.company);
 
-    console.log('Courses:', courses);
-    console.log('Companies:', companies);
+    
     res.json({ courses, companies });
   } catch (error) {
     console.error('Error in getDistinct:', error); // Log the full error

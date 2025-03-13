@@ -25,7 +25,7 @@ const Login = () => {
       if (role === 'admin') {
         navigate('/admin'); // Redirect to admin dashboard
       } else if (role === 'student') {
-        navigate('/student/quiz'); // Redirect to student quiz page
+        navigate('/student/home'); // Redirect to student quiz page
       }
     } catch (error) {
       setError('Invalid username or password');

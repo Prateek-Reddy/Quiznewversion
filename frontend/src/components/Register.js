@@ -17,7 +17,7 @@ const Register = () => {
         role: 'student', // Default role for registration
       });
       localStorage.setItem('token', response.data.token); // Save the token
-      navigate('/quiz'); // Redirect to the quiz page
+      navigate('/student/home'); // Redirect to the quiz page
     } catch (error) {
       setError('Registration failed. Please try again.');
     }

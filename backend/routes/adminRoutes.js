@@ -42,6 +42,35 @@ router.put('/curriculum-analyses/:id', adminController.editCurriculumAnalysis);
 router.delete('/curriculum-analyses/:id', adminController.deleteCurriculumAnalysis);
 router.get('/distinct-subjects', adminController.getDistinctSubjects);
 
+// Company Rounds Management
+router.post('/company-rounds', adminController.addCompanyRounds); // Add new company rounds
+router.get('/company-rounds', adminController.getAllCompanyRounds); // Get all company rounds (with pagination and filtering)
+router.get('/company-rounds/:id', adminController.getCompanyRoundsById); // Get a single company round by ID
+router.put('/company-rounds/:id', adminController.editCompanyRounds); // Edit a company round
+router.delete('/company-rounds/:id', adminController.deleteCompanyRounds); // Delete a company round
+router.get('/distinct-companies', adminController.getDistinctCompaniesForCompanyRounds); // Get distinct company names for filtering
+
+// Student Hiring Management
+router.post('/student-hiring', adminController.addStudentHiring); // Add a new record
+router.get('/student-hiring', adminController.getAllStudentHiring); // Get all records (with pagination and filtering)
+router.put('/student-hiring/:id', adminController.editStudentHiring); // Edit a record
+router.delete('/student-hiring/:id', adminController.deleteStudentHiring); // Delete a record
+router.get('/distinctcompanies', adminController.getDistinctCompaniesForStudentHiring); // Get distinct company names for filtering
+
+// Type of Rounds Management
+router.post('/typeofrounds', adminController.addTypeOfRounds); // Add a new record
+router.get('/typeofrounds', adminController.getAllTypeOfRounds); // Get all records (with pagination and filtering)
+router.put('/typeofrounds/:id', adminController.editTypeOfRounds); // Edit a record
+router.delete('/typeofrounds/:id', adminController.deleteTypeOfRounds); // Delete a record
+router.get('/typeofrounds/distinct-companies', adminController.getDistinctCompaniesForTypeOfRounds); // Get distinct companies
+
+// Company Salaries Routes
+router.post('/company-salaries', adminController.addCompanySalaries);
+router.put('/company-salaries/:id', adminController.editCompanySalaries);
+router.delete('/company-salaries/:id', adminController.deleteCompanySalaries);
+router.get('/company-salaries', adminController.getAllCompanySalaries);
+router.get('/company-salaries/distinct-companies', adminController.getDistinctCompaniesForCompanySalaries);
+
 // Analytics
 router.get('/analytics', adminController.getAnalytics);
 

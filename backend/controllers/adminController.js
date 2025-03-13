@@ -501,3 +501,631 @@ exports.downloadInstructions = async (req, res) => {
     res.status(500).json({ error: 'Failed to generate instructions file.' });
   }
 }; 
+
+//(online vs offline total table:id,company,no_of_rounds,no_of_online_rounds,no_of_offline_rounds)
+// Add company rounds
+const checkUniqueCompanyCR = async (company, id = null) => {
+  let query = 'SELECT id FROM company_rounds WHERE company = $1';
+  const values = [company];
+
+  if (id) {
+    query += ' AND id != $2';
+    values.push(id);
+  }
+
+  const result = await pool.query(query, values);
+  return result.rows.length === 0; // Returns true if the company name is unique
+};
+
+// Add a new company rounds record
+exports.addCompanyRounds = async (req, res) => {
+  console.log('Request Body:', req.body); // Debugging
+  const { company, no_of_rounds, no_of_online_rounds, no_of_offline_rounds } = req.body;
+
+  // Check if the company name is unique
+  const isUnique = await checkUniqueCompanyCR(company);
+  if (!isUnique) {
+    return res.status(400).json({ error: 'Company name must be unique.' });
+  }
+
+  try {
+    const query = `
+      INSERT INTO company_rounds (company, no_of_rounds, no_of_online_rounds, no_of_offline_rounds)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *;
+    `;
+    const values = [company, no_of_rounds, no_of_online_rounds, no_of_offline_rounds];
+    console.log('Query:', query, values); // Debugging
+    const result = await pool.query(query, values);
+    console.log('Result:', result.rows[0]); // Debugging
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error in addCompanyRounds:', error); // Debugging
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Edit an existing company rounds record
+exports.editCompanyRounds = async (req, res) => {
+  const { id } = req.params;
+  const { company, no_of_rounds, no_of_online_rounds, no_of_offline_rounds } = req.body;
+
+  // Check if the company name is unique (excluding the current record)
+  const isUnique = await checkUniqueCompanyCR(company, id);
+  if (!isUnique) {
+    return res.status(400).json({ error: 'Company name must be unique.' });
+  }
+
+  try {
+    const query = `
+      UPDATE company_rounds
+      SET company = $1, no_of_rounds = $2, no_of_online_rounds = $3, no_of_offline_rounds = $4
+      WHERE id = $5
+      RETURNING *;
+    `;
+    const values = [company, no_of_rounds, no_of_online_rounds, no_of_offline_rounds, id];
+    const result = await pool.query(query, values);
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getAllCompanyRounds = async (req, res) => {
+  const { page = 1, limit = 10, company } = req.query;
+  const offset = (page - 1) * limit;
+
+  try {
+    let query = 'SELECT * FROM company_rounds';
+    const params = [];
+    let whereClauses = [];
+
+    // Add filters
+    if (company) {
+      whereClauses.push(`company = $${params.length + 1}`);
+      params.push(company);
+    }
+
+    // Build the WHERE clause
+    if (whereClauses.length > 0) {
+      query += ` WHERE ${whereClauses.join(' AND ')}`;
+    }
+
+    // Add pagination
+    query += ` LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    params.push(limit, offset);
+
+    // Fetch company rounds
+    const result = await pool.query(query, params);
+
+    // Fetch total count for pagination
+    const countQuery = `SELECT COUNT(*) FROM company_rounds ${whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : ''}`;
+    const countResult = await pool.query(countQuery, params.slice(0, whereClauses.length));
+
+    res.json({
+      companyRounds: result.rows,
+      total: countResult.rows[0].count,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.deleteCompanyRounds = async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM company_rounds WHERE id = $1;', [id]);
+    res.json({ message: 'Company rounds deleted successfully.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getDistinctCompaniesForCompanyRounds = async (req, res) => {
+  try {
+    const result = await pool.query('SELECT DISTINCT company FROM company_rounds;');
+    res.json(result.rows.map(row => row.company));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getCompanyRoundsById = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const query = 'SELECT * FROM company_rounds WHERE id = $1;';
+    const result = await pool.query(query, [id]);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Company rounds not found.' });
+    }
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+//(total students hired and gender table :id,company,no_of_students_hired,no_of_male_students,no_of_female_students)
+const checkUniqueCompanySH = async (company, id = null) => {
+  let query = 'SELECT id FROM student_hiring WHERE company = $1';
+  const values = [company];
+
+  if (id) {
+    query += ' AND id != $2';
+    values.push(id);
+  }
+
+  const result = await pool.query(query, values);
+  return result.rows.length === 0; // Returns true if the company name is unique
+};
+// Add a new student hiring record
+exports.addStudentHiring = async (req, res) => {
+  const { company, no_of_students_hired, no_of_male_students, no_of_female_students } = req.body;
+
+  // Validate that total students hired equals the sum of male and female students
+  if (no_of_students_hired !== no_of_male_students + no_of_female_students) {
+    return res.status(400).json({ error: 'Total students hired must equal the sum of male and female students.' });
+  }
+
+  // Check if the company name is unique
+  const isUnique = await checkUniqueCompanySH(company);
+  if (!isUnique) {
+    return res.status(400).json({ error: 'Company name must be unique.' });
+  }
+
+  try {
+    // Reset the sequence to avoid duplicate key errors
+    await pool.query('SELECT setval(\'student_hiring_id_seq\', (SELECT MAX(id) FROM student_hiring));');
+
+    // Insert the new student hiring record
+    const query = `
+      INSERT INTO student_hiring (company, no_of_students_hired, no_of_male_students, no_of_female_students)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *;
+    `;
+    const values = [company, no_of_students_hired, no_of_male_students, no_of_female_students];
+    const result = await pool.query(query, values);
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Edit an existing student hiring record
+exports.editStudentHiring = async (req, res) => {
+  const { id } = req.params;
+  const { company, no_of_students_hired, no_of_male_students, no_of_female_students } = req.body;
+
+  // Validate that total students hired equals the sum of male and female students
+  if (no_of_students_hired !== no_of_male_students + no_of_female_students) {
+    return res.status(400).json({ error: 'Total students hired must equal the sum of male and female students.' });
+  }
+
+  // Check if the company name is unique (excluding the current record)
+  const isUnique = await checkUniqueCompanySH(company, id);
+  if (!isUnique) {
+    return res.status(400).json({ error: 'Company name must be unique.' });
+  }
+
+  try {
+    const query = `
+      UPDATE student_hiring
+      SET company = $1, no_of_students_hired = $2, no_of_male_students = $3, no_of_female_students = $4
+      WHERE id = $5
+      RETURNING *;
+    `;
+    const values = [company, no_of_students_hired, no_of_male_students, no_of_female_students, id];
+    const result = await pool.query(query, values);
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Delete a student hiring record
+exports.deleteStudentHiring = async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM student_hiring WHERE id = $1;', [id]);
+    res.json({ message: 'Student hiring record deleted successfully.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get all student hiring records (with pagination and filtering)
+exports.getAllStudentHiring = async (req, res) => {
+  const { page = 1, limit = 10, company } = req.query;
+  const offset = (page - 1) * limit;
+
+  try {
+    let query = 'SELECT * FROM student_hiring';
+    const params = [];
+    let whereClauses = [];
+
+    // Add filters
+    if (company) {
+      whereClauses.push(`company = $${params.length + 1}`);
+      params.push(company);
+    }
+
+    // Build the WHERE clause
+    if (whereClauses.length > 0) {
+      query += ` WHERE ${whereClauses.join(' AND ')}`;
+    }
+
+    // Add pagination
+    query += ` LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    params.push(limit, offset);
+
+    // Fetch student hiring records
+    const result = await pool.query(query, params);
+
+    // Fetch total count for pagination
+    const countQuery = `SELECT COUNT(*) FROM student_hiring ${whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : ''}`;
+    const countResult = await pool.query(countQuery, params.slice(0, whereClauses.length));
+
+    res.json({
+      studentHiring: result.rows,
+      total: countResult.rows[0].count,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.getDistinctCompaniesForStudentHiring = async (req, res) => {
+  try {
+    const result = await pool.query('SELECT DISTINCT company FROM student_hiring;');
+    res.json(result.rows.map(row => row.company));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+//(type of rounds table company ,aptitude_round, technical_round, managerial_round, technical_hr_round, group_discussion ,online_coding_round ,written_coding_round )
+// Helper function to check if a company name is unique
+const checkUniqueCompanyTR = async (company, id = null) => {
+  let query = 'SELECT id FROM typeofrounds WHERE company = $1';
+  const values = [company];
+
+  if (id) {
+    query += ' AND id != $2';
+    values.push(id);
+  }
+
+  const result = await pool.query(query, values);
+  return result.rows.length === 0; // Returns true if the company name is unique
+};
+
+// Add a new record
+exports.addTypeOfRounds = async (req, res) => {
+  const {
+    company,
+    aptitude_round,
+    technical_round,
+    managerial_round,
+    technical_hr_round,
+    group_discussion,
+    online_coding_round,
+    written_coding_round,
+  } = req.body;
+
+  // Check if the company name is unique
+  const isUnique = await checkUniqueCompanyTR(company);
+  if (!isUnique) {
+    return res.status(400).json({ error: 'Company name must be unique.' });
+  }
+
+  try {
+    // Insert the new record
+    const query = `
+      INSERT INTO typeofrounds (
+        company,
+        aptitude_round,
+        technical_round,
+        managerial_round,
+        technical_hr_round,
+        group_discussion,
+        online_coding_round,
+        written_coding_round
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *;
+    `;
+    const values = [
+      company,
+      aptitude_round,
+      technical_round,
+      managerial_round,
+      technical_hr_round,
+      group_discussion,
+      online_coding_round,
+      written_coding_round,
+    ];
+    const result = await pool.query(query, values);
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Edit an existing record
+exports.editTypeOfRounds = async (req, res) => {
+  const { id } = req.params;
+  const {
+    company,
+    aptitude_round,
+    technical_round,
+    managerial_round,
+    technical_hr_round,
+    group_discussion,
+    online_coding_round,
+    written_coding_round,
+  } = req.body;
+
+  // Check if the company name is unique (excluding the current record)
+  const isUnique = await checkUniqueCompanyTR(company, id);
+  if (!isUnique) {
+    return res.status(400).json({ error: 'Company name must be unique.' });
+  }
+
+  try {
+    const query = `
+      UPDATE typeofrounds
+      SET
+        company = $1,
+        aptitude_round = $2,
+        technical_round = $3,
+        managerial_round = $4,
+        technical_hr_round = $5,
+        group_discussion = $6,
+        online_coding_round = $7,
+        written_coding_round = $8
+      WHERE id = $9
+      RETURNING *;
+    `;
+    const values = [
+      company,
+      aptitude_round,
+      technical_round,
+      managerial_round,
+      technical_hr_round,
+      group_discussion,
+      online_coding_round,
+      written_coding_round,
+      id,
+    ];
+    const result = await pool.query(query, values);
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Delete a record
+exports.deleteTypeOfRounds = async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM typeofrounds WHERE id = $1;', [id]);
+    res.json({ message: 'Record deleted successfully.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get all records (with pagination and filtering)
+exports.getAllTypeOfRounds = async (req, res) => {
+  const { page = 1, limit = 10, company } = req.query;
+  const offset = (page - 1) * limit;
+
+  try {
+    let query = 'SELECT * FROM typeofrounds';
+    const params = [];
+    let whereClauses = [];
+
+    // Add filters
+    if (company) {
+      whereClauses.push(`company = $${params.length + 1}`);
+      params.push(company);
+    }
+
+    // Build the WHERE clause
+    if (whereClauses.length > 0) {
+      query += ` WHERE ${whereClauses.join(' AND ')}`;
+    }
+
+    // Add pagination
+    query += ` LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    params.push(limit, offset);
+
+    // Fetch records
+    const result = await pool.query(query, params);
+
+    // Fetch total count for pagination
+    const countQuery = `SELECT COUNT(*) FROM typeofrounds ${whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : ''}`;
+    const countResult = await pool.query(countQuery, params.slice(0, whereClauses.length));
+
+    res.json({
+      typeofrounds: result.rows,
+      total: countResult.rows[0].count,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get distinct companies
+exports.getDistinctCompaniesForTypeOfRounds = async (req, res) => {
+  try {
+    const result = await pool.query('SELECT DISTINCT company FROM typeofrounds;');
+    res.json(result.rows.map(row => row.company));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+//(company,role,salary)
+// Helper function to check if a company name is unique
+const checkUniqueCompanyCS = async (company, id = null) => {
+  let query = 'SELECT id FROM company_salaries WHERE company = $1';
+  const values = [company];
+
+  // Exclude the current record when editing
+  if (id) {
+    query += ' AND id != $2';
+    values.push(id);
+  }
+
+  const result = await pool.query(query, values);
+  return result.rows.length === 0; // Returns true if the company name is unique
+};
+
+// Add a new record
+exports.addCompanySalaries = async (req, res) => {
+  const { company, roles, salaries } = req.body;
+
+  // Validate roles and salaries
+  if (!roles || !salaries) {
+    return res.status(400).json({ error: 'Roles and salaries are required.' });
+  }
+
+  // Ensure roles and salaries are valid (e.g., no empty values)
+  const rolesArray = roles.split('/');
+  const salariesArray = salaries.split('/');
+
+  if (rolesArray.length !== salariesArray.length) {
+    return res.status(400).json({ error: 'Roles and salaries must have the same number of entries.' });
+  }
+
+  // Check if the company name is unique
+  const isUnique = await checkUniqueCompanyCS(company);
+  if (!isUnique) {
+    return res.status(400).json({ error: 'Company name must be unique.' });
+  }
+
+  try {
+    // Insert the new record
+    const query = `
+      INSERT INTO company_salaries (company, roles, salaries)
+      VALUES ($1, $2, $3)
+      RETURNING *;
+    `;
+    const values = [company, roles, salaries];
+    const result = await pool.query(query, values);
+
+    // Update the sequence value for the id column
+    const setvalQuery = `
+      SELECT setval(pg_get_serial_sequence('company_salaries', 'id'), coalesce(max(id), 0) + 1, false)
+      FROM company_salaries;
+    `;
+    await pool.query(setvalQuery);
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error adding record:', error); // Log the error
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Edit an existing record
+exports.editCompanySalaries = async (req, res) => {
+  const { id } = req.params;
+  const { company, roles, salaries } = req.body;
+
+  // Validate roles and salaries
+  if (!roles || !salaries) {
+    return res.status(400).json({ error: 'Roles and salaries are required.' });
+  }
+
+  // Ensure roles and salaries are valid
+  const rolesArray = roles.split('/');
+  const salariesArray = salaries.split('/');
+
+  if (rolesArray.length !== salariesArray.length) {
+    return res.status(400).json({ error: 'Roles and salaries must have the same number of entries.' });
+  }
+
+  // Check if the company name is unique (excluding the current record)
+  const isUnique = await checkUniqueCompanyCS(company, id);
+  if (!isUnique) {
+    return res.status(400).json({ error: 'Company name must be unique.' });
+  }
+
+  try {
+    const query = `
+      UPDATE company_salaries
+      SET company = $1, roles = $2, salaries = $3
+      WHERE id = $4
+      RETURNING *;
+    `;
+    const values = [company, roles, salaries, id];
+    const result = await pool.query(query, values);
+    res.json(result.rows[0]);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Delete a record
+exports.deleteCompanySalaries = async (req, res) => {
+  const { id } = req.params;
+  try {
+    await pool.query('DELETE FROM company_salaries WHERE id = $1;', [id]);
+    res.json({ message: 'Record deleted successfully.' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+//GetCompanySalaries
+exports.getAllCompanySalaries = async (req, res) => {
+  const { page = 1, limit = 10, company } = req.query;
+  const offset = (page - 1) * limit;
+
+  try {
+    let query = 'SELECT * FROM company_salaries';
+    const params = [];
+    let whereClauses = [];
+
+    // Add filters
+    if (company) {
+      whereClauses.push(`company = $${params.length + 1}`);
+      params.push(company);
+    }
+
+    // Build the WHERE clause
+    if (whereClauses.length > 0) {
+      query += ` WHERE ${whereClauses.join(' AND ')}`;
+    }
+
+    // Add pagination
+    query += ` LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    params.push(limit, offset);
+
+    // Fetch records
+    const result = await pool.query(query, params);
+
+    // Fetch total count for pagination
+    const countQuery = `SELECT COUNT(*) FROM company_salaries ${whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : ''}`;
+    const countResult = await pool.query(countQuery, params.slice(0, whereClauses.length));
+
+    res.json({
+      companySalaries: result.rows,
+      total: countResult.rows[0].count,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+//Get Distinct Companies
+exports.getDistinctCompaniesForCompanySalaries = async (req, res) => {
+  try {
+    const result = await pool.query('SELECT DISTINCT company FROM company_salaries;');
+    res.json(result.rows.map(row => row.company));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
